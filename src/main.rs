@@ -7,8 +7,13 @@ use rayon::prelude::{ParallelDrainRange, ParallelIterator};
 
 fn extract_links(doc: &str) -> Vec<String> {
     let mut links = Vec::new();
+    
+    if doc.find("Wikimedia Error").is_some() {
+        println!("nogood");
+        return links;
+    }
+    
     let mut start = 0usize;
-
     while start < doc.len() {
         match doc[start..].find("<a href=\"/wiki/") {
             Some(x) => {
@@ -34,10 +39,11 @@ async fn main() {
     let mut urls_to_visit = VecDeque::from(["Canada".to_owned()]);
     let mut unicity_holder = HashSet::new();
 
-
+    let mut total_visited = 0usize;
+    let total_time = Instant::now();
     while !urls_to_visit.is_empty() {
         let started_at = Instant::now();
-        let n = 500.min(urls_to_visit.len());
+        let n = 1000.min(urls_to_visit.len());
         
         let a = urls_to_visit
             .par_drain(..n)
@@ -62,9 +68,11 @@ async fn main() {
 
         unicity_holder.extend(a.clone());
         urls_to_visit.extend(a);
+        total_visited += n;
         println!(
-            "nb req: {} | avgtime: {} ms | nb unique {}",
-            n,
+            "total nb req: {} | total time: {} s | avgtime: {} ms | nb unique {}",
+            total_visited,
+            total_time.elapsed().as_secs(),
             started_at.elapsed().as_millis() as f64 / n as f64,
             unicity_holder.len()
         );
